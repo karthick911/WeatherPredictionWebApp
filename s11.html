@@ -1,0 +1,634 @@
+<?php
+$feedbackSubmitted = false;
+$name = "";
+$message = "";
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["submit-feedback"])) {
+    $name = htmlspecialchars(trim($_POST["name"]));
+    $message = htmlspecialchars(trim($_POST["message"]));
+    $date = date("Y-m-d H:i:s");
+
+    if (!empty($name) && !empty($message)) {
+        $entry = "[$date] From: $name\n$message\n\n";
+        file_put_contents("feedback.txt", $entry, FILE_APPEND);
+        $feedbackSubmitted = true;
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weather & Feedback App</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --light-bg: #a3d5ff;
+            --dark-bg: #1c1c1e;
+            --light-text: #000;
+            --dark-text: #fff;
+            --card-light: #fff;
+            --card-dark: #2c2c2e;
+            --accent: #0072ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--light-text);
+            transition: background-color 0.4s, color 0.4s;
+            padding-top: 80px;
+        }
+
+        body.dark-mode {
+            background-color: var(--dark-bg);
+            color: var(--dark-text);
+        }
+
+        video#video-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 30px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+
+        nav a,
+        .dark-mode-toggle {
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 16px;
+            color: var(--accent);
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        nav a:hover,
+        .dark-mode-toggle:hover {
+            background-color: rgba(0, 114, 255, 0.1);
+        }
+
+        nav a.active {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .main-container {
+            max-width: 1000px;
+            margin: auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .search-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-bar input,
+        .search-bar button {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        .search-bar button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .search-bar button:hover {
+            opacity: 0.9;
+        }
+
+        .weather-today,
+        .weather-card {
+            background: linear-gradient(to right, #fdd835, #ffeb3b);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .hour-cards,
+        .day-cards {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 10px 0;
+        }
+
+        .day-card {
+            background-color: var(--card-light);
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        body.dark-mode .main-container {
+            background: rgba(44, 44, 46, 0.95);
+        }
+
+        body.dark-mode nav {
+            background: rgba(40, 40, 42, 0.9);
+        }
+
+        body.dark-mode .day-card,
+        body.dark-mode .feedback-container,
+        body.dark-mode .content-section {
+            background-color: var(--card-dark);
+            color: var(--dark-text);
+        }
+
+        .feedback-container,
+        .content-section {
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+            background-color: var(--card-light);
+            margin-bottom: 20px;
+        }
+
+        .feedback-container input,
+        .feedback-container textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        .feedback-container button {
+            background-color: var(--accent);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        footer {
+            text-align: center;
+            padding: 15px;
+            margin-top: 40px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.85);
+        }
+
+        .content-section h2 {
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+
+        .content-section p {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .content-section ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .content-section li {
+            margin-bottom: 8px;
+        }
+
+        /* Animation for section transitions */
+        .page-section {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .cookie-banner {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            font-size: 16px;
+            flex-wrap: wrap;
+        }
+
+        .cookie-buttons {
+            margin-top: 10px;
+        }
+
+        .cookie-banner button {
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 5px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .cookie-banner button:hover {
+            background-color: #e68900;
+        }
+
+        .ad-section {
+            background-color: #f1f1f1;
+            border: 2px dashed #ccc;
+            padding: 15px;
+            margin: 20px auto;
+            width: 90%;
+            text-align: center;
+            font-size: 16px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="<?= isset($_COOKIE['mode']) && $_COOKIE['mode'] === 'dark' ? 'dark-mode' : '' ?>">
+    <video autoplay muted loop id="video-bg">
+        <source src="C:\Users\karth\Desktop\videos\climatevideo_background.mp4.mp4" type="video/mp4" />
+    </video>
+    <div id="cookie-banner" class="cookie-banner">
+        <p>This website uses cookies to ensure you get the best experience.</p>
+        <div class="cookie-buttons">
+            <button onclick="acceptCookies()">Accept</button>
+            <button onclick="rejectCookies()">Reject</button>
+        </div>
+    </div>
+    <div id="ad-section" class="ad-section" style="display: none;">
+        <p><strong>Sponsored:</strong> Check out the best travel gear at <a href="https://example.com"
+                target="_blank">example.com</a>!</p>
+    </div>
+    <form action="feed.php" method="post">
+        <label for="name">Name:</label><br>
+        <input type="text" id="name" name="name" required><br><br>
+
+        <label for="feedback">Feedback:</label><br>
+        <textarea id="feedback" name="feedback" rows="5" required></textarea><br><br>
+
+        <input type="submit" value="Submit">
+    </form>
+
+
+
+
+    <nav>
+        <a href="#" onclick="showSection('home'); return false;" class="active">Home</a>
+        <a href="#" onclick="showSection('about'); return false;">About</a>
+        <a href="#" onclick="showSection('tips'); return false;">Tips</a>
+        <a href="#" onclick="showSection('feedback'); return false;">Feedback</a>
+        <span class="dark-mode-toggle" onclick="toggleDarkMode()">🌓</span>
+    </nav>
+
+    <div class="main-container">
+        <!-- Home Section -->
+        <div id="home-section" class="page-section">
+            <h1 style="text-align:center; margin-bottom: 20px;">Weather Prediction Web App</h1>
+
+            <div class="search-bar">
+                <input type="text" id="city-input" placeholder="Enter city..." />
+                <button onclick="getWeather()">Search</button>
+                <button onclick="toggleUnit()">Switch °C/°F</button>
+            </div>
+
+            <div class="weather-today" id="weather-display">
+                <h2>Now: -- °C - --</h2>
+                <p>Feels like -- °C</p>
+                <p>Humidity: -- % | Wind: -- kph</p>
+            </div>
+
+            <div class="hourly-forecast">
+                <h3>Hourly Forecast</h3>
+                <canvas id="hourlyChart" height="120"></canvas>
+            </div>
+
+            <div class="daily-forecast">
+                <h3>Upcoming Days</h3>
+                <div class="day-cards" id="daily-cards"></div>
+            </div>
+
+            <div class="weather-card">
+                <p id="weather-city-info">Weather in <strong>--</strong>: --, --°C</p>
+            </div>
+
+            <h3>Favorite Cities</h3>
+            <div class="search-bar">
+                <input type="text" id="fav-city-input" placeholder="Add to favorites...">
+                <button onclick="addToFavorites()">Add</button>
+            </div>
+            <ul id="favorites-list">
+                <li><a href="#" onclick="searchCity('Strasbourg')">Strasbourg</a></li>
+                <li><a href="#" onclick="searchCity('Paris')">Paris</a></li>
+                <li><a href="#" onclick="searchCity('Madrid')">Madrid</a></li>
+            </ul>
+        </div>
+
+        <!-- About Section -->
+        <div id="about-section" class="page-section" style="display: none;">
+            <div class="content-section">
+                <h2>About This Weather App</h2>
+                <p>Welcome to WeatherPredict, your reliable source for accurate weather forecasts and real-time weather
+                    data
+                    from around the world. Our mission is to provide you with the most up-to-date weather information to
+                    help you plan your day effectively.</p>
+
+                <h3>Features:</h3>
+                <ul>
+                    <li><strong>Real-time Weather Data:</strong> Get current weather conditions for any city worldwide
+                    </li>
+                    <li><strong>Hourly Forecasts:</strong> View temperature trends for the next 8 hours</li>
+                    <li><strong>5-Day Outlook:</strong> Plan ahead with our multi-day forecast</li>
+                    <li><strong>Favorite Cities:</strong> Save your frequently checked locations</li>
+                    <li><strong>Dark/Light Mode:</strong> Choose your preferred viewing style</li>
+                    <li><strong>Unit Conversion:</strong> Switch between Celsius and Fahrenheit</li>
+                </ul>
+
+
+
+                <p>Whether you're planning a trip, scheduling outdoor activities, or just curious about the weather,
+                    WeatherPredict has you covered!</p>
+            </div>
+        </div>
+
+        <!-- Tips Section -->
+        <div id="tips-section" class="page-section" style="display: none;">
+            <div class="content-section">
+                <h2>Weather Tips & Information</h2>
+
+                <h3>Understanding Weather Terms</h3>
+                <ul>
+                    <li><strong>Temperature:</strong> The measure of how hot or cold the air is</li>
+                    <li><strong>Feels Like:</strong> What the temperature feels like considering wind and humidity</li>
+                    <li><strong>Humidity:</strong> Amount of water vapor in the air (higher = more muggy)</li>
+                    <li><strong>Wind Speed:</strong> How fast the air is moving (higher = stronger winds)</li>
+                </ul>
+
+                <h3>Weather Preparedness Tips</h3>
+                <p><strong>Hot Weather:</strong></p>
+                <ul>
+                    <li>Stay hydrated by drinking plenty of water</li>
+                    <li>Wear light-colored, loose-fitting clothing</li>
+                    <li>Apply sunscreen with at least SPF 30</li>
+                    <li>Limit outdoor activities during peak heat hours (10am-4pm)</li>
+                </ul>
+
+                <p><strong>Cold Weather:</strong></p>
+                <ul>
+                    <li>Dress in layers to trap body heat</li>
+                    <li>Cover exposed skin to prevent frostbite</li>
+                    <li>Be cautious of black ice on roads and sidewalks</li>
+                    <li>Check your home's heating system before winter</li>
+                </ul>
+
+                <p><strong>Rainy Weather:</strong></p>
+                <ul>
+                    <li>Carry an umbrella or waterproof jacket</li>
+                    <li>Allow extra travel time as roads may be slippery</li>
+                    <li>Watch for potential flooding in low-lying areas</li>
+                    <li>Ensure proper drainage around your home</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Feedback Section -->
+        <div id="feedback-section" class="page-section" style="display: none;">
+            <div class="feedback-container">
+                <h2>Send Feedback</h2>
+
+                <form method="POST">
+                    <label for="name">Name:</label>
+                    <input type="text" name="name" id="name" required />
+                    <label for="message">Feedback:</label>
+                    <textarea name="message" id="message" rows="5" required></textarea>
+                    <button type="submit" name="submit-feedback">Submit</button>
+                </form>
+
+                <div style="margin-top: 20px;">
+                    <h3>Contact Information</h3>
+                    <p>For urgent inquiries or support, please contact us at:</p>
+                    <p>Email: sudharsan230@gmail.com.com</p>
+                    <p>Phone: 9150413377</p>
+                    <p>Office Hours: Monday-Friday, 9:00 AM - 5:00 PM (EST)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>&copy; 23BCA0271 Sudharsan S -23BCA0143 Karthick K</footer>
+
+    <script>
+        let unit = 'metric';
+        let chart;
+
+        // Section navigation
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.page-section').forEach(section => {
+                section.style.display = 'none';
+            });
+
+            // Show the selected section
+            document.getElementById(sectionId + '-section').style.display = 'block';
+
+            // Update active nav link
+            document.querySelectorAll('nav a').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        // Set home as default visible section
+        window.onload = function () {
+            showSection('home');
+        };
+
+        function toggleUnit() {
+            unit = unit === 'metric' ? 'imperial' : 'metric';
+            if (document.getElementById('city-input').value) {
+                getWeather();
+            }
+        }
+
+        function getWeather() {
+            const city = document.getElementById('city-input').value;
+            const apiKey = '8b32469b756fa25c4c49731ea727f2e3';
+
+            fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=${unit}&appid=${apiKey}`)
+                .then(res => res.json())
+                .then(data => {
+                    const { temp, feels_like, humidity } = data.main;
+                    const { speed } = data.wind;
+                    const desc = data.weather[0].description;
+                    const name = data.name;
+
+                    document.getElementById('weather-display').innerHTML = `
+                        <h2>Now: ${Math.round(temp)}°${unit === 'metric' ? 'C' : 'F'} - ${desc}</h2>
+                        <p>Feels like ${Math.round(feels_like)}°</p>
+                        <p>Humidity: ${humidity}% | Wind: ${Math.round(speed)} ${unit === 'metric' ? 'kph' : 'mph'}</p>`;
+
+                    document.getElementById('weather-city-info').innerHTML = `
+                        Weather in <strong>${name}</strong>: ${desc}, ${Math.round(temp)}°`;
+
+                    return fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&units=${unit}&appid=${apiKey}`);
+                })
+                .then(res => res.json())
+                .then(forecast => {
+                    const hourlyData = forecast.list.slice(0, 8);
+                    const hours = hourlyData.map(item => `${new Date(item.dt * 1000).getHours()}:00`);
+                    const temps = hourlyData.map(item => item.main.temp);
+
+                    if (chart) chart.destroy();
+                    chart = new Chart(document.getElementById('hourlyChart'), {
+                        type: 'line',
+                        data: {
+                            labels: hours,
+                            datasets: [{
+                                label: 'Temp',
+                                data: temps,
+                                borderColor: '#0072ff',
+                                fill: false,
+                                tension: 0.3
+                            }]
+                        }
+                    });
+
+                    const dailyContainer = document.getElementById('daily-cards');
+                    dailyContainer.innerHTML = '';
+                    const dayMap = {};
+
+                    forecast.list.forEach(item => {
+                        const date = new Date(item.dt_txt).toLocaleDateString();
+                        if (!dayMap[date]) dayMap[date] = item;
+                    });
+
+                    Object.entries(dayMap).slice(0, 5).forEach(([date, item]) => {
+                        dailyContainer.innerHTML += `
+                            <div class="day-card">
+                                <div>${date}</div>
+                                <img src="http://openweathermap.org/img/wn/${item.weather[0].icon}.png" />
+                                <div>${Math.round(item.main.temp)}°</div>
+                            </div>`;
+                    });
+                })
+                .catch(err => alert('City not found'));
+        }
+
+        function searchCity(city) {
+            document.getElementById('city-input').value = city;
+            getWeather();
+            showSection('home');
+        }
+
+        function addToFavorites() {
+            const city = document.getElementById('fav-city-input').value;
+            if (!city.trim()) return;
+            const li = document.createElement('li');
+            li.innerHTML = `<a href="#" onclick="searchCity('${city}')">${city}</a>`;
+            document.getElementById('favorites-list').appendChild(li);
+            document.getElementById('fav-city-input').value = '';
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            document.cookie = "mode=" + (document.body.classList.contains('dark-mode') ? "dark" : "light");
+        }
+        function setCookie(name, value, days) {
+            const expires = new Date(Date.now() + days * 86400000).toUTCString();
+            document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+        }
+
+        function getCookie(name) {
+            const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+            return match ? decodeURIComponent(match[2]) : null;
+        }
+
+        function acceptCookies() {
+            setCookie("cookieConsent", "accepted", 365);
+            document.getElementById("cookie-banner").style.display = "none";
+        }
+
+        function rejectCookies() {
+            setCookie("cookieConsent", "rejected", 365);
+            document.getElementById("cookie-banner").style.display = "none";
+        }
+
+        window.onload = function () {
+            const consent = getCookie("cookieConsent");
+            if (!consent) {
+                document.getElementById("cookie-banner").style.display = "flex";
+            }
+
+            showSection('home');
+        };
+
+    </script>
+</body>
+
+</html>
